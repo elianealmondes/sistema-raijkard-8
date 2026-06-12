@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SysImport — Recebimento e Conferência de Materiais Importados</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: rgba(0,0,0,0.10);
+    --border-strong: rgba(0,0,0,0.18);
+    --text: #1a1a18;
+    --text-muted: #6b6b67;
+    --text-hint: #9b9b96;
+    --blue-50: #E6F1FB; --blue-200: #85B7EB; --blue-600: #185FA5; --blue-800: #0C447C;
+    --teal-50: #E1F5EE; --teal-200: #5DCAA5; --teal-600: #0F6E56; --teal-800: #085041;
+    --amber-50: #FAEEDA; --amber-200: #EF9F27; --amber-600: #854F0B; --amber-800: #633806;
+    --green-50: #EAF3DE; --green-200: #97C459; --green-600: #3B6D11; --green-800: #27500A;
+    --red-50: #FCEBEB; --red-200: #F09595; --red-600: #A32D2D; --red-800: #791F1F;
+    --purple-50: #EEEDFE; --purple-200: #AFA9EC; --purple-600: #534AB7; --purple-800: #3C3489;
+    --gray-50: #F1EFE8; --gray-200: #B4B2A9; --gray-600: #5F5E5A; --gray-800: #444441;
+    --radius: 10px; --radius-lg: 14px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6; min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: var(--surface); border-bottom: 0.5px solid var(--border-strong); padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 17px; letter-spacing: -0.3px; }
+  .logo-icon { width: 32px; height: 32px; background: var(--blue-800); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; }
+  .header-nav { display: flex; gap: 4px; }
+  .nav-btn { background: none; border: none; padding: 6px 14px; border-radius: 8px; font-size: 13px; color: var(--text-muted); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .nav-btn:hover, .nav-btn.active { background: var(--blue-50); color: var(--blue-800); font-weight: 500; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .badge-status { background: var(--green-50); color: var(--green-800); font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 500; border: 0.5px solid var(--green-200); }
+
+  /* LAYOUT */
+  .layout { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 60px); }
+
+  /* SIDEBAR */
+  .sidebar { background: var(--surface); border-right: 0.5px solid var(--border); padding: 1.5rem 1rem; display: flex; flex-direction: column; gap: 6px; }
+  .sidebar-section { font-size: 11px; color: var(--text-hint); font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.5rem 0.75rem; margin-top: 0.5rem; }
+  .sidebar-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--radius); cursor: pointer; color: var(--text-muted); font-size: 14px; transition: all 0.12s; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
+  .sidebar-item:hover { background: var(--surface2); color: var(--text); }
+  .sidebar-item.active { background: var(--blue-50); color: var(--blue-800); font-weight: 500; }
+  .sidebar-item i { font-size: 17px; flex-shrink: 0; }
+  .sidebar-item .step-num { width: 20px; height: 20px; border-radius: 50%; background: var(--blue-200); color: var(--blue-800); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .sidebar-item.done .step-num { background: var(--green-200); color: var(--green-800); }
+  .sidebar-item.active .step-num { background: var(--blue-800); color: #fff; }
+  .sidebar-item.pending .step-num { background: var(--gray-200); color: var(--gray-800); }
+
+  /* MAIN */
+  .main { padding: 2rem; overflow-y: auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* DASHBOARD */
+  .page-title { font-size: 22px; font-weight: 600; margin-bottom: 0.25rem; letter-spacing: -0.4px; }
+  .page-subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 1.5rem; }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+  .metric { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1rem 1.25rem; }
+  .metric-label { font-size: 12px; color: var(--text-hint); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .metric-value { font-size: 26px; font-weight: 600; letter-spacing: -0.5px; }
+  .metric-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .metric.blue .metric-value { color: var(--blue-800); }
+  .metric.amber .metric-value { color: var(--amber-600); }
+  .metric.green .metric-value { color: var(--green-600); }
+  .metric.red .metric-value { color: var(--red-600); }
+
+  /* CARDS */
+  .card { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .card-title { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .card-title i { font-size: 17px; color: var(--text-muted); }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th { text-align: left; padding: 8px 12px; font-size: 12px; color: var(--text-hint); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 0.5px solid var(--border); }
+  tbody td { padding: 10px 12px; border-bottom: 0.5px solid var(--border); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+
+  /* BADGES */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+  .badge-blue { background: var(--blue-50); color: var(--blue-800); border: 0.5px solid var(--blue-200); }
+  .badge-green { background: var(--green-50); color: var(--green-800); border: 0.5px solid var(--green-200); }
+  .badge-amber { background: var(--amber-50); color: var(--amber-600); border: 0.5px solid var(--amber-200); }
+  .badge-red { background: var(--red-50); color: var(--red-800); border: 0.5px solid var(--red-200); }
+  .badge-gray { background: var(--gray-50); color: var(--gray-800); border: 0.5px solid var(--gray-200); }
+  .badge-purple { background: var(--purple-50); color: var(--purple-800); border: 0.5px solid var(--purple-200); }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; border: 0.5px solid var(--border-strong); background: var(--surface); color: var(--text); font-family: inherit; transition: all 0.12s; }
+  .btn:hover { background: var(--surface2); }
+  .btn-primary { background: var(--blue-800); color: #fff; border-color: var(--blue-800); }
+  .btn-primary:hover { background: var(--blue-600); border-color: var(--blue-600); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+  .form-group input, .form-group select, .form-group textarea { border: 0.5px solid var(--border-strong); border-radius: var(--radius); padding: 8px 12px; font-size: 14px; font-family: inherit; background: var(--surface); color: var(--text); outline: none; transition: border-color 0.12s; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--blue-600); box-shadow: 0 0 0 2px rgba(24,95,165,0.12); }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+  .form-full { grid-column: 1 / -1; }
+
+  /* FLUXO ETAPAS */
+  .steps-flow { display: flex; flex-direction: column; gap: 0; }
+  .step-item { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; border-radius: var(--radius); cursor: pointer; transition: all 0.12s; border: 0.5px solid transparent; }
+  .step-item:hover { background: var(--surface2); border-color: var(--border); }
+  .step-item.active-step { background: var(--blue-50); border-color: var(--blue-200); }
+  .step-connector { width: 2px; background: var(--border); height: 20px; margin-left: 19px; }
+  .step-circle { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0; }
+  .step-circle.done { background: var(--green-50); color: var(--green-800); border: 1.5px solid var(--green-200); }
+  .step-circle.current { background: var(--blue-800); color: #fff; }
+  .step-circle.pending { background: var(--gray-50); color: var(--gray-600); border: 1.5px solid var(--gray-200); }
+  .step-body { flex: 1; }
+  .step-body h4 { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+  .step-body p { font-size: 13px; color: var(--text-muted); }
+
+  /* PROGRESS BAR */
+  .progress-bar { height: 6px; background: var(--surface2); border-radius: 99px; overflow: hidden; margin-bottom: 4px; }
+  .progress-fill { height: 100%; border-radius: 99px; background: var(--blue-800); transition: width 0.4s ease; }
+
+  /* NCM */
+  .ncm-card { border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; background: var(--surface2); }
+  .ncm-code { font-family: 'Courier New', monospace; font-size: 18px; font-weight: 600; color: var(--blue-800); letter-spacing: 2px; }
+
+  /* CUSTO */
+  .cost-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 0.5px solid var(--border); font-size: 14px; }
+  .cost-row:last-child { border-bottom: none; font-weight: 600; font-size: 15px; }
+  .cost-row .cost-label { color: var(--text-muted); }
+  .cost-row .cost-value { font-weight: 500; }
+  .cost-total { color: var(--blue-800); }
+
+  /* TIMELINE */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .tl-item { display: flex; gap: 1rem; }
+  .tl-left { display: flex; flex-direction: column; align-items: center; }
+  .tl-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--blue-800); flex-shrink: 0; margin-top: 5px; }
+  .tl-dot.done { background: var(--green-600); }
+  .tl-dot.pending { background: var(--gray-200); }
+  .tl-line { width: 2px; flex: 1; background: var(--border); margin: 4px 0; }
+  .tl-body { padding-bottom: 1rem; flex: 1; }
+  .tl-title { font-size: 14px; font-weight: 500; }
+  .tl-date { font-size: 12px; color: var(--text-hint); }
+  .tl-desc { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+  /* NOTIFICATION */
+  .notif { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; border-radius: var(--radius); border: 0.5px solid; margin-bottom: 8px; }
+  .notif.info { background: var(--blue-50); border-color: var(--blue-200); }
+  .notif.warn { background: var(--amber-50); border-color: var(--amber-200); }
+  .notif.success { background: var(--green-50); border-color: var(--green-200); }
+  .notif i { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
+  .notif.info i { color: var(--blue-800); }
+  .notif.warn i { color: var(--amber-600); }
+  .notif.success i { color: var(--green-600); }
+  .notif-content p { font-size: 13px; }
+  .notif-content strong { font-size: 13px; }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1.5rem; width: 560px; max-width: 95vw; max-height: 85vh; overflow-y: auto; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+  .modal-title { font-size: 17px; font-weight: 600; }
+  .modal-close { background: none; border: none; cursor: pointer; color: var(--text-hint); font-size: 20px; padding: 4px; }
+  .modal-close:hover { color: var(--text); }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; padding-top: 1rem; border-top: 0.5px solid var(--border); }
+
+  /* QUICK ACTIONS */
+  .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .quick-btn { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; cursor: pointer; transition: all 0.12s; text-align: left; font-family: inherit; width: 100%; }
+  .quick-btn:hover { background: var(--blue-50); border-color: var(--blue-200); }
+  .quick-btn i { font-size: 22px; color: var(--blue-600); }
+  .quick-btn span { font-size: 13px; font-weight: 500; color: var(--text); }
+  .quick-btn small { font-size: 12px; color: var(--text-hint); }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 99px; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .metrics { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon"><i class="ti ti-ship"></i></div>
+    SysImport
+  </div>
+  <nav class="header-nav">
+    <button class="nav-btn active" onclick="goPage('dashboard')">Painel</button>
+    <button class="nav-btn" onclick="goPage('processos')">Processos</button>
+    <button class="nav-btn" onclick="goPage('fluxo')">Fluxo</button>
+    <button class="nav-btn" onclick="goPage('ncm')">NCM</button>
+    <button class="nav-btn" onclick="goPage('custos')">Custos</button>
+    <button class="nav-btn" onclick="goPage('docs')">Documentos</button>
+    <button class="nav-btn" onclick="goPage('monitoramento')">Monitoramento</button>
+  </nav>
+  <div class="header-right">
+    <span class="badge-status"><i class="ti ti-circle-dot" style="font-size:11px"></i> Sistema ativo</span>
+  </div>
+</header>
+
+<div class="layout">
+<aside class="sidebar">
+  <div class="sidebar-section">Processo selecionado</div>
+  <div class="form-group" style="padding: 0 0.75rem; margin-bottom: 0.5rem;">
+    <select id="sidebar-process-selector" onchange="changeActiveProcess(this.value)" style="width:100%; padding:6px; font-size:12px;"></select>
+  </div>
+  <div id="sidebar-steps"></div>
+  <div class="sidebar-section" style="margin-top:1rem">Navegação</div>
+  <button class="sidebar-item" onclick="goPage('dashboard')"><i class="ti ti-layout-dashboard"></i> Painel geral</button>
+  <button class="sidebar-item" onclick="goPage('processos')"><i class="ti ti-list-details"></i> Processos</button>
+  <button class="sidebar-item" onclick="goPage('docs')"><i class="ti ti-file-description"></i> Documentos</button>
+  <button class="sidebar-item" onclick="openModal('modalNovo')"><i class="ti ti-plus"></i> Novo processo</button>
+</aside>
+
+<main class="main">
+
+  <div class="page active" id="page-dashboard">
+    <h1 class="page-title">Painel de controle</h1>
+    <p class="page-subtitle">Visão geral dos processos de importação em andamento</p>
+
+    <div class="metrics">
+      <div class="metric blue">
+        <div class="metric-label">Em andamento</div>
+        <div class="metric-value" id="m-andamento">0</div>
+        <div class="metric-sub">processos ativos</div>
+      </div>
+      <div class="metric amber">
+        <div class="metric-label">Aguardando ação</div>
+        <div class="metric-value" id="m-atencao">0</div>
+        <div class="metric-sub">requerem atenção</div>
+      </div>
+      <div class="metric green">
+        <div class="metric-label">Concluídos</div>
+        <div class="metric-value" id="m-concluidos">0</div>
+        <div class="metric-sub">este semestre</div>
+      </div>
+      <div class="metric red">
+        <div class="metric-label">Valor em trânsito</div>
+        <div class="metric-value" id="m-valor">US$ 0k</div>
+        <div class="metric-sub"><span id="m-embarques">0</span> embarques</div>
+      </div>
+    </div>
+
+    <div class="notif info">
+      <i class="ti ti-info-circle"></i>
+      <div class="notif-content"><strong>Processo IMP-2025-003</strong><p>Embarque chegou ao porto de Santos. Contate o despachante aduaneiro para iniciar despacho.</p></div>
+    </div>
+    <div class="notif warn">
+      <i class="ti ti-alert-triangle"></i>
+      <div class="notif-content"><strong>Licença de Importação pendente</strong><p>Processo IMP-2025-005 aguarda emanação de LI. Prazo: 3 dias.</p></div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="ti ti-activity"></i> Processos recentes</div>
+          <button class="btn btn-sm" onclick="goPage('processos')">Ver todos</button>
+        </div>
+        <table>
+          <thead><tr><th>Processo</th><th>Produto</th><th>Etapa</th><th>Status</th></tr></thead>
+          <tbody id="dash-recent-table">
+            </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i class="ti ti-bolt"></i> Ações rápidas</div>
+        </div>
+        <div class="quick-grid">
+          <button class="quick-btn" onclick="openModal('modalNovo')"><i class="ti ti-plus"></i><span>Novo processo</span><small>Iniciar importação</small></button>
+          <button class="quick-btn" onclick="goPage('ncm')"><i class="ti ti-search"></i><span>Consultar NCM</span><small>Classificação fiscal</small></button>
+          <button class="quick-btn" onclick="goPage('custos')"><i class="ti ti-calculator"></i><span>Simular custos</span><small>Estimativa de DI</small></button>
+          <button class="quick-btn" onclick="openModal('modalDoc')"><i class="ti ti-upload"></i><span>Enviar documento</span><small>Fatura, LI, DI...</small></button>
+          <button class="quick-btn" onclick="goPage('monitoramento')"><i class="ti ti-radar"></i><span>Monitoramento</span><small>Rastrear embarque</small></button>
+          <button class="quick-btn" onclick="goPage('fluxo')"><i class="ti ti-sitemap"></i><span>Ver fluxo</span><small>14 etapas</small></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-processos">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+      <div>
+        <h1 class="page-title">Processos de importação</h1>
+        <p class="page-subtitle">Gerencie e acompanhe todos os processos</p>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('modalNovo')"><i class="ti ti-plus"></i> Novo processo</button>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr><th>Processo</th><th>Fornecedor</th><th>Produto / NCM</th><th>Incoterm</th><th>Valor FOB</th><th>Etapa atual</th><th>Status</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="tb-processos">
+          </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page" id="page-fluxo">
+    <h1 class="page-title">Fluxo de recebimento</h1>
+    <p class="page-subtitle">14 etapas do processo de importação — clique para ver detalhes e avançar</p>
+
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:1.5rem">
+      <div class="card" style="padding:1rem">
+        <div class="steps-flow" id="steps-flow"></div>
+      </div>
+      <div>
+        <div class="card" id="step-detail-card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:0.5rem" id="step-detail-title">Selecione uma etapa</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem" id="step-detail-desc">Clique em uma das 14 etapas ao lado para ver os detalhes, documentos necessários e ações disponíveis.</p>
+          <div id="step-detail-docs"></div>
+          <div id="step-detail-actions" style="margin-top:1rem"></div>
+        </div>
+        <div class="card" style="margin-top:1rem">
+          <div class="card-title" style="margin-bottom:0.75rem"><i class="ti ti-chart-bar"></i> Progresso geral</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px" id="flow-proc-id">Processo ---</div>
+          <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+          <div style="font-size:12px;color:var(--text-hint);margin-top:4px" id="flow-proc-text">Etapa 0 de 14 — 0% concluído</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-ncm">
+    <h1 class="page-title">Consulta NCM</h1>
+    <p class="page-subtitle">Nomenclatura Comum do Mercosul — classificação e tratamento tributário</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:1rem"><i class="ti ti-search"></i> Buscar classificação</div>
+        <div style="display:flex;flex-direction:column;gap:1rem">
+          <div class="form-group">
+            <label>Descrição do produto</label>
+            <input type="text" id="ncm-query" placeholder="Ex: equipamento eletrônico, máquina industrial..." />
+          </div>
+          <div class="form-group">
+            <label>Código NCM (opcional)</label>
+            <input type="text" id="ncm-code" placeholder="Ex: 8471.30.19" maxlength="10"/>
+          </div>
+          <button class="btn btn-primary" onclick="consultarNCM()"><i class="ti ti-search"></i> Consultar</button>
+        </div>
+
+        <div id="ncm-result" style="margin-top:1.25rem;display:none">
+          <div class="ncm-card">
+            <div style="font-size:11px;color:var(--text-hint);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Código NCM</div>
+            <div class="ncm-code" id="ncm-result-code">0000.00.00</div>
+            <div style="font-size:14px;font-weight:500;margin-top:6px" id="ncm-result-name">Nome</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-top:4px" id="ncm-result-desc">Descrição</div>
+          </div>
+          <div style="margin-top:1rem">
+            <div style="font-size:12px;color:var(--text-hint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Tributação</div>
+            <div class="cost-row"><span class="cost-label">Imposto de Importação (II)</span><span class="cost-value" id="ncm-ii">0%</span></div>
+            <div class="cost-row"><span class="cost-label">IPI</span><span class="cost-value" id="ncm-ipi">0%</span></div>
+            <div class="cost-row"><span class="cost-label">PIS/COFINS importação</span><span class="cost-value">9,65%</span></div>
+            <div class="cost-row"><span class="cost-label">ICMS (Estimado)</span><span class="cost-value">18%</span></div>
+            <div class="cost-row"><span class="cost-label">Tratamento especial</span><span class="cost-value"><span class="badge badge-amber" id="ncm-li">Exige LI</span></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:1rem"><i class="ti ti-history"></i> NCMs catalogados</div>
+        <table>
+          <thead><tr><th>NCM</th><th>Descrição</th><th>II</th></tr></thead>
+          <tbody>
+            <tr><td><span style="font-family:monospace;font-size:13px">8471.30.19</span></td><td>Computadores portáteis</td><td>16%</td></tr>
+            <tr><td><span style="font-family:monospace;font-size:13px">8479.89.99</span></td><td>Máquinas industriais</td><td>14%</td></tr>
+            <tr><td><span style="font-family:monospace;font-size:13px">8708.99.90</span></td><td>Peças para veículos</td><td>18%</td></tr>
+            <tr><td><span style="font-family:monospace;font-size:13px">8517.12.31</span></td><td>Smartphones</td><td>16%</td></tr>
+          </tbody>
+        </table>
+        <div class="notif info" style="margin-top:1rem">
+          <i class="ti ti-info-circle"></i>
+          <div class="notif-content"><p>A classificação NCM correta é essencial para determinar a tributação e exigência de Licença de Importação.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-custos">
+    <h1 class="page-title">Estimativa de custos</h1>
+    <p class="page-subtitle">Simule os custos totais da operação de importação</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:1rem"><i class="ti ti-calculator"></i> Parâmetros da operação</div>
+        <div style="display:flex;flex-direction:column;gap:1rem">
+          <div class="form-group"><label>Valor FOB (USD)</label><input type="number" id="c-fob" value="100000" oninput="calcCustos()"/></div>
+          <div class="form-group"><label>Frete internacional (USD)</label><input type="number" id="c-frete" value="3500" oninput="calcCustos()"/></div>
+          <div class="form-group"><label>Seguro (%)</label><input type="number" id="c-seguro" value="0.5" step="0.1" oninput="calcCustos()"/></div>
+          <div class="form-group"><label>Imposto de Importação (%)</label><input type="number" id="c-ii" value="16" oninput="calcCustos()"/></div>
+          <div class="form-group"><label>IPI (%)</label><input type="number" id="c-ipi" value="5" oninput="calcCustos()"/></div>
+          <div class="form-group"><label>Taxa de câmbio (R$/USD)</label><input type="number" id="c-cambio" value="5.10" step="0.01" oninput="calcCustos()"/></div>
+          <div class="form-group"><label>Incoterm</label>
+            <select id="c-incoterm" onchange="calcCustos()">
+              <option value="fob">FOB</option><option value="cif">CIF</option><option value="exw">EXW</option><option value="ddp">DDP</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:1rem"><i class="ti ti-receipt"></i> Resumo de custos</div>
+        <div id="cost-breakdown">
+          <div class="cost-row"><span class="cost-label">Valor FOB</span><span class="cost-value" id="cr-fob">US$ 100.000</span></div>
+          <div class="cost-row"><span class="cost-label">Frete</span><span class="cost-value" id="cr-frete">US$ 3.500</span></div>
+          <div class="cost-row"><span class="cost-label">Seguro</span><span class="cost-value" id="cr-seguro">US$ 500</span></div>
+          <div class="cost-row"><span class="cost-label">Valor CIF</span><span class="cost-value" id="cr-cif" style="font-weight:600">US$ 104.000</span></div>
+          <div class="cost-row"><span class="cost-label">II (Imposto de Importação)</span><span class="cost-value" id="cr-ii">US$ 16.640</span></div>
+          <div class="cost-row"><span class="cost-label">IPI</span><span class="cost-value" id="cr-ipi">US$ 6.032</span></div>
+          <div class="cost-row"><span class="cost-label">PIS/COFINS import. (9,65%)</span><span class="cost-value" id="cr-pis">US$ 10.036</span></div>
+          <div class="cost-row"><span class="cost-label">Despachante + taxas</span><span class="cost-value" id="cr-desp">US$ 2.500</span></div>
+          <div class="cost-row cost-total"><span>Total estimado (USD)</span><span id="cr-total" class="cost-total">US$ 139.208</span></div>
+          <div class="cost-row cost-total"><span>Total estimado (BRL)</span><span id="cr-total-brl" class="cost-total">R$ 709.961</span></div>
+        </div>
+        <div style="margin-top:1rem;padding:1rem;background:var(--blue-50);border-radius:var(--radius);border:0.5px solid var(--blue-200)">
+          <div style="font-size:12px;color:var(--blue-800);font-weight:500;margin-bottom:4px">Custo adicional sobre FOB</div>
+          <div style="font-size:24px;font-weight:600;color:var(--blue-800)" id="cr-markup">39,2%</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Inclui impostos, frete, seguro e despesas aduaneiras</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-docs">
+    <h1 class="page-title">Gestão de documentos</h1>
+    <p class="page-subtitle">Organize e acompanhe todos os documentos da operação</p>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-files"></i> Histórico de Documentos</div>
+        <button class="btn btn-primary" onclick="openModal('modalDoc')"><i class="ti ti-upload"></i> Enviar documento</button>
+      </div>
+      <table>
+        <thead><tr><th>Documento</th><th>Tipo</th><th>Emitido em</th><th>Status</th><th>Responsável</th><th>Processo</th></tr></thead>
+        <tbody id="tb-docs">
+          </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="page" id="page-monitoramento">
+    <h1 class="page-title">Monitoramento de embarque</h1>
+    <p class="page-subtitle" id="monit-subtitle">Selecione um processo ativo para rastrear</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:1rem"><i class="ti ti-ship"></i> Dados do embarque</div>
+        <table>
+          <tr><td style="color:var(--text-muted);font-size:13px;padding:6px 0">Navio</td><td style="font-size:13px;font-weight:500" id="mon-navio">MSC Gülsün</td></tr>
+          <tr><td style="color:var(--text-muted);font-size:13px;padding:6px 0">Número do BL</td><td style="font-size:13px;font-family:monospace" id="mon-bl">MSCG250145871</td></tr>
+          <tr><td style="color:var(--text-muted);font-size:13px;padding:6px 0">Porto de origem</td><td style="font-size:13px" id="mon-origem">Busan, Coreia do Sul</td></tr>
+          <tr><td style="color:var(--text-muted);font-size:13px;padding:6px 0">Porto de destino</td><td style="font-size:13px">Santos, Brasil</td></tr>
+          <tr><td style="color:var(--text-muted);font-size:13px;padding:6px 0">ETA (Previsão)</td><td style="font-size:13px;font-weight:500;color:var(--amber-600)" id="mon-eta">14/02/2025</td></tr>
+          <tr><td style="color:var(--text-muted);font-size:13px;padding:6px 0">Situação Atual</td><td><span class="badge badge-amber" id="mon-status">Em trânsito</span></td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:1rem"><i class="ti ti-route"></i> Histórico de movimentação</div>
+        <div class="timeline" id="mon-timeline">
+          </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<div class="modal-overlay" id="modalNovo">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Novo processo de importação</div>
+      <button class="modal-close" onclick="closeModal('modalNovo')"><i class="ti ti-x"></i></button>
+    </div>
+    <form id="form-novo-processo" onsubmit="criarProcesso(event)">
+      <div class="form-grid">
+        <div class="form-group"><label>Nome do fornecedor</label><input type="text" id="f-fornecedor" required placeholder="Ex: Samsung Electronics Co."/></div>
+        <div class="form-group"><label>País de origem</label><select id="f-pais"><option>Coreia do Sul</option><option>China</option><option>Alemanha</option><option>Estados Unidos</option><option>Japão</option></select></div>
+        <div class="form-group"><label>Produto</label><input type="text" id="f-produto" required placeholder="Descrição do produto"/></div>
+        <div class="form-group"><label>Código NCM</label><input type="text" id="f-ncm" required placeholder="Ex: 8471.30.19" maxlength="10"/></div>
+        <div class="form-group"><label>Valor FOB (USD)</label><input type="number" id="f-fob" required placeholder="Ex: 100000"/></div>
+        <div class="form-group"><label>Incoterm</label><select id="f-incoterm"><option>FOB</option><option>CIF</option><option>EXW</option><option>DDP</option></select></div>
+        <div class="form-group form-full"><label>Método de pagamento</label><select id="f-pagamento"><option>Carta de Crédito (L/C)</option><option>Remessa antecipada</option><option>Cobrança documentária</option><option>Open Account</option></select></div>
+        <div class="form-group form-full"><label>Observações</label><textarea id="f-obs" placeholder="Informações adicionais sobre a operação..."></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="closeModal('modalNovo')">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="ti ti-check"></i> Criar processo</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalDoc">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Enviar documento</div>
+      <button class="modal-close" onclick="closeModal('modalDoc')"><i class="ti ti-x"></i></button>
+    </div>
+    <form id="form-novo-doc" onsubmit="enviarDoc(event)">
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <div class="form-group"><label>Tipo de documento</label>
+          <select id="doc-tipo">
+            <option>Fatura Proforma</option><option>Fatura Comercial</option><option>Licença de Importação (LI)</option>
+            <option>Declaração de Importação (DI)</option><option>Conhecimento de Embarque (BL)</option>
+            <option>Carta de Crédito (L/C)</option><option>Apólice de Seguro</option><option>Packing List</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Processo relacionado</label>
+          <select id="doc-processo-rel"></select>
+        </div>
+        <div class="form-group"><label>Responsável</label><input type="text" id="doc-resp" required placeholder="Nome do emitente"/></div>
+        <div style="border:1.5px dashed var(--border-strong);border-radius:var(--radius-lg);padding:1.5rem;text-align:center;color:var(--text-muted); background: var(--bg)">
+          <i class="ti ti-upload" style="font-size:24px;display:block;margin-bottom:4px"></i>
+          <span style="font-size:13px">Upload Simulado (o arquivo será adicionado ao sistema)</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="closeModal('modalDoc')">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="ti ti-upload"></i> Adicionar Documento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalProcesso">
+  <div class="modal" style="width:640px">
+    <div class="modal-header">
+      <div class="modal-title" id="mp-title">Processo ---</div>
+      <button class="modal-close" onclick="closeModal('modalProcesso')"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="mp-body"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalProcesso')">Fechar</button>
+      <button class="btn btn-primary" id="mp-btn-avancar" onclick="avancarEtapaModal()"><i class="ti ti-arrow-right"></i> Avançar etapa</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ETAPAS PADRÃO DO SISTEMA
+const BASE_ETAPAS = [
+  { num:1, label:'Planejamento inicial', desc:'Definição dos objetivos, fornecedores e viabilidade da importação.', docs:['Pesquisa de mercado','Análise de viabilidade'] },
+  { num:2, label:'Identificação de NCM', desc:'Classificação do produto na Nomenclatura Comum do Mercosul para correta tributação.', docs:['Ficha técnica do produto','Catálogo do fabricante'] },
+  { num:3, label:'Tratamento administrativo e tributário', desc:'Análise dos regimes tributários, drawback, ex-tarifário e benefícios fiscais aplicáveis.', docs:['Análise tributária','Consulta CAMEX'] },
+  { num:4, label:'Estimativa de custos', desc:'Projeção dos custos totais: impostos, frete, seguro, despachante e câmbio.', docs:['Planilha de custos','Simulação DI'] },
+  { num:5, label:'Negociação de Incoterms, frete e seguro', desc:'Definição das responsabilidades entre comprador e vendedor. Contratação de frete e seguro.', docs:['Cotação de frete','Proposta de seguro'] },
+  { num:6, label:'Método de pagamento', desc:'Negociação e emissão da Carta de Crédito ou outro instrumento de pagamento internacional.', docs:['Carta de Crédito (L/C)','Swift bancário'] },
+  { num:7, label:'Fatura Proforma e LI', desc:'Recebimento da Fatura Proforma e obtenção da Licença de Importação no SISCOMEX quando exigida.', docs:['Fatura Proforma','Licença de Importação'] },
+  { num:8, label:'Confirmação do negócio', desc:'Aceite formal dos termos comerciais e validação do pedido com o exportador.', docs:['Purchase Order (PO)','Contrato de compra e venda'] },
+  { num:9, label:'Autorização de embarque', desc:'Emissão da autorização para o exportador iniciar o embarque da mercadoria.', docs:['Autorização de embarque','Instruções de embarque'] },
+  { num:10, label:'Monitoramento do embarque', desc:'Acompanhamento do embarque até a chegada ao porto brasileiro. Tracking de container.', docs:['Bill of Lading','Packing List','Certificado de Origem'] },
+  { num:11, label:'Contratação de despachante', desc:'Habilitação do despachante aduaneiro para representar o importador perante a Receita Federal.', docs:['Procuração aduaneira','RADAR habilitação'] },
+  { num:12, label:'Declaração de Importação (DI)', desc:'Registro da DI no SISCOMEX com todas as informações da operação e pagamento dos impostos.', docs:['Declaração de Importação','Comprovante de pagamento de tributos'] },
+  { num:13, label:'Despacho aduaneiro', desc:'Processo de liberação da mercadoria pela Receita Federal. Pode incluir inspeção física (canal vermelho).', docs:['DI registrada','Nota de despacho'] },
+  { num:14, label:'Câmbio para pagamento final', desc:'Contratação de câmbio junto à instituição financeira para liquidação do pagamento ao exportador.', docs:['TIOP — contrato de câmbio','Comprovante SWIFT'] }
+];
+
+// BANCO DE DADOS EM MEMÓRIA (ESTADO GLOBAL DA APLICAÇÃO)
+let PROCESSOS = [
+  { id: 'IMP-2025-003', fornecedor: 'Samsung Electronics Co.', produto: 'Equipamentos eletrônicos', ncm: '8471.30.19', incoterm: 'FOB', valor: 120000, etapaAtual: 10, status: 'Em trânsito', navio: 'MSC Gülsün', bl: 'MSCG250145871', origem: 'Busan, Coreia do Sul', eta: '14/02/2025' },
+  { id: 'IMP-2025-004', fornecedor: 'Siemens AG', produto: 'Máquinas industriais', ncm: '8479.89.99', incoterm: 'CIF', valor: 95000, etapaAtual: 6, status: 'Negociação', navio: 'CMA CGM Marco Polo', bl: 'CMAC72819201', origem: 'Hamburgo, Alemanha', eta: '28/02/2025' },
+  { id: 'IMP-2025-005', fornecedor: 'Bosch GmbH', produto: 'Componentes automotivos', ncm: '8708.99.90', incoterm: 'FOB', valor: 69000, etapaAtual: 7, status: 'Pendente', navio: 'Maersk Mc-Kinney', bl: 'MAEU93820192', origem: 'Roterdã, Holanda', eta: '05/03/2025' },
+  { id: 'IMP-2025-001', fornecedor: 'Apple Inc.', produto: 'Dispositivos móveis', ncm: '8517.12.31', incoterm: 'FOB', valor: 210000, etapaAtual: 14, status: 'Finalizado', navio: 'Ever Given', bl: 'EVCG4739201', origem: 'Shenzhen, China', eta: '10/01/2025' }
+];
+
+let DOCUMENTOS = [
+  { nome: 'Fatura Proforma', tipo: 'Proforma Invoice', data: '12/01/2025', status: 'Recebido', resp: 'Exportador', proc: 'IMP-2025-003' },
+  { nome: 'Licença de Importação', tipo: 'LI', data: '15/01/2025', status: 'Aprovada', resp: 'SISCOMEX', proc: 'IMP-2025-003' },
+  { nome: 'Fatura Comercial', tipo: 'Commercial Invoice', data: '20/01/2025', status: 'Recebido', resp: 'Exportador', proc: 'IMP-2025-003' },
+  { nome: 'Conhecimento de Embarque', tipo: 'Bill of Lading', data: '25/01/2025', status: 'Recebido', resp: 'Armador', proc: 'IMP-2025-003' },
+  { nome: 'Fatura Proforma', tipo: 'Proforma Invoice', data: '18/01/2025', status: 'Recebido', resp: 'Exportador', proc: 'IMP-2025-004' }
+];
+
+const ncmDB = [
+  { code:'8471.30.19', name:'Máquinas para processamento de dados', desc:'Portáteis, de peso não superior a 10 kg', ii:16, ipi:5, li:true },
+  { code:'8479.89.99', name:'Máquinas e aparelhos mecânicos', desc:'Com função própria, não especificadas', ii:14, ipi:5, li:false },
+  { code:'8708.99.90', name:'Partes e acessórios para veículos', desc:'Outras partes e acessórios', ii:18, ipi:10, li:true },
+  { code:'8517.12.31', name:'Telefones para redes celulares', desc:'Smartphones com tela colorida', ii:16, ipi:8, li:true },
+];
+
+// VARIÁVEL DE PROCESSO EM FOCO (Para a aba Fluxo e Sidebar)
+let activeProcessId = 'IMP-2025-003';
+let modalTargetProcessId = null;
+
+// INICIALIZADOR
+window.addEventListener('DOMContentLoaded', () => {
+  updateAllViews();
+  setTimeout(() => showStepDetail(9), 100);
+});
+
+// FUNÇÃO DE ATUALIZAÇÃO GERAL DA INTERFACE
+function updateAllViews() {
+  renderMetrics();
+  renderProcessTables();
+  renderSelectors();
+  renderSidebarSteps();
+  renderFluxoTimeline();
+  renderDocumentTable();
+  renderMonitoramento();
+}
+
+// 1. ATUALIZAÇÃO DE MÉTRICAS (DASHBOARD)
+function renderMetrics() {
+  let emAndamento = 0, atencao = 0, concluidos = 0, valorEmTransito = 0, embarques = 0;
+  
+  PROCESSOS.forEach(p => {
+    if(p.status === 'Finalizado' || p.etapaAtual === 14) {
+      concluidos++;
+    } else {
+      emAndamento++;
+      if(p.status === 'Pendente') atencao++;
+      if(p.etapaAtual >= 10 && p.etapaAtual < 13) {
+        valorEmTransito += p.valor;
+        embarques++;
+      }
+    }
+  });
+
+  document.getElementById('m-andamento').textContent = emAndamento;
+  document.getElementById('m-atencao').textContent = atencao;
+  document.getElementById('m-concluidos').textContent = concluidos;
+  document.getElementById('m-valor').textContent = `US$ ${Math.round(valorEmTransito/1000)}k`;
+  document.getElementById('m-embarques').textContent = embarques;
+}
+
+// 2. ATUALIZAÇÃO DAS TABELAS (PROCESSOS E RECENTES)
+function renderProcessTables() {
+  const tbProcessos = document.getElementById('tb-processos');
+  const dashRecent = document.getElementById('dash-recent-table');
+  
+  let htmlFull = '';
+  let htmlRecent = '';
+
+  PROCESSOS.forEach(p => {
+    const badgeColor = p.etapaAtual === 14 ? 'badge-green' : p.status === 'Pendente' ? 'badge-red' : p.status === 'Negociação' ? 'badge-blue' : 'badge-amber';
+    const statusText = p.etapaAtual === 14 ? 'Finalizado' : p.status;
+
+    htmlFull += `<tr>
+      <td><strong>${p.id}</strong></td>
+      <td>${p.fornecedor}</td>
+      <td>${p.produto}<br><span style="font-size:11px;color:var(--text-hint)">NCM ${p.ncm}</span></td>
+      <td><span class="badge badge-purple">${p.incoterm}</span></td>
+      <td>US$ ${p.valor.toLocaleString('pt-BR')}</td>
+      <td><span class="badge badge-blue">${p.etapaAtual} — ${BASE_ETAPAS[p.etapaAtual-1].label}</span></td>
+      <td><span class="badge ${badgeColor}">${statusText}</span></td>
+      <td><button class="btn btn-sm" onclick="abrirProcessoModal('${p.id}')"><i class="ti ti-eye"></i></button></td>
+    </tr>`;
+
+    htmlRecent += `<tr>
+      <td>${p.id}</td>
+      <td>${p.produto}</td>
+      <td>${p.etapaAtual}/14</td>
+      <td><span class="badge ${badgeColor}">${statusText}</span></td>
+    </tr>`;
+  });
+
+  if(tbProcessos) tbProcessos.innerHTML = htmlFull;
+  if(dashRecent) dashRecent.innerHTML = htmlRecent;
+}
+
+// 3. RENDERIZAÇÃO DOS SELETORES DINÂMICOS
+function renderSelectors() {
+  const sidebarSelect = document.getElementById('sidebar-process-selector');
+  const docSelect = document.getElementById('doc-processo-rel');
+  
+  let options = PROCESSOS.map(p => `<option value="${p.id}" ${p.id === activeProcessId ? 'selected' : ''}>${p.id} (${p.produto.substring(0,15)})</option>`).join('');
+  
+  if(sidebarSelect) sidebarSelect.innerHTML = options;
+  if(docSelect) docSelect.innerHTML = PROCESSOS.map(p => `<option value="${p.id}">${p.id}</option>`).join('');
+}
+
+function changeActiveProcess(id) {
+  activeProcessId = id;
+  updateAllViews();
+}
+
+// 4. ETAPAS NA SIDEBAR (DO PROCESSO SELECIONADO)
+function renderSidebarSteps() {
+  const el = document.getElementById('sidebar-steps');
+  const proc = PROCESSOS.find(p => p.id === activeProcessId);
+  if(!proc || !el) return;
+
+  el.innerHTML = BASE_ETAPAS.map((e) => {
+    let cls = 'pending';
+    let icon = e.num;
+    if (e.num < proc.etapaAtual) { cls = 'done'; icon = '<i class="ti ti-check" style="font-size:10px"></i>'; }
+    else if (e.num === proc.etapaAtual) { cls = 'active'; }
+
+    return `<button class="sidebar-item ${cls === 'active' ? 'active' : ''}" onclick="goPage('fluxo'); syncFluxoStep(${e.num - 1})">
+      <div class="step-num">${icon}</div>
+      <span style="font-size:13px">${e.label}</span>
+    </button>`;
+  }).join('');
+}
+
+// 5. ABA DO FLUXO INTERATIVO DE 14 ETAPAS
+function renderFluxoTimeline() {
+  const el = document.getElementById('steps-flow');
+  const proc = PROCESSOS.find(p => p.id === activeProcessId);
+  if(!proc || !el) return;
+
+  // Atualizar card de progresso geral na aba de fluxo
+  document.getElementById('flow-proc-id').textContent = `Processo ${proc.id} - ${proc.produto}`;
+  const pct = Math.round((proc.etapaAtual / 14) * 100);
+  document.getElementById('prog-fill').style.width = `${pct}%`;
+  document.getElementById('flow-proc-text').textContent = `Etapa ${proc.etapaAtual} de 14 — ${pct}% concluído`;
+
+  el.innerHTML = BASE_ETAPAS.map((e, i) => {
+    let cls = 'pending';
+    let badge = '<span class="badge badge-gray">Pendente</span>';
+    let icon = e.num;
+
+    if (e.num < proc.etapaAtual) {
+      cls = 'done';
+      icon = '<i class="ti ti-check" style="font-size:14px"></i>';
+      badge = '<span class="badge badge-green">Concluído</span>';
+    } else if (e.num === proc.etapaAtual) {
+      cls = 'current';
+      badge = proc.status === 'Finalizado' ? '<span class="badge badge-green">Concluído</span>' : '<span class="badge badge-amber">Em andamento</span>';
+    }
+
+    if(proc.etapaAtual === 14 && e.num === 14) {
+       cls = 'done';
+       icon = '<i class="ti ti-check" style="font-size:14px"></i>';
+    }
+
+    return `<div>
+      <div class="step-item ${e.num === proc.etapaAtual ? 'active-step' : ''}" onclick="showStepDetail(${i})">
+        <div class="step-circle ${cls}">${icon}</div>
+        <div class="step-body">
+          <h4>${e.label}</h4>
+          <p>${e.desc.substring(0,65)}...</p>
+        </div>
+        ${badge}
+      </div>
+      ${i < 13 ? '<div class="step-connector"></div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function syncFluxoStep(idx) {
+  showStepDetail(idx);
+}
+
+function showStepDetail(idx) {
+  const e = BASE_ETAPAS[idx];
+  const proc = PROCESSOS.find(p => p.id === activeProcessId);
+  
+  document.getElementById('step-detail-title').textContent = `Etapa ${e.num} — ${e.label}`;
+  document.getElementById('step-detail-desc').textContent = e.desc;
+  
+  const docsEl = document.getElementById('step-detail-docs');
+  docsEl.innerHTML = `<div style="font-size:12px;color:var(--text-hint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Documentos vinculados nesta fase</div>` +
+    e.docs.map(d => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px"><i class="ti ti-file" style="color:var(--text-muted)"></i>${d}</div>`).join('');
+  
+  const actEl = document.getElementById('step-detail-actions');
+  if (e.num === proc.etapaAtual && proc.etapaAtual < 14) {
+    actEl.innerHTML = `<button class="btn btn-primary" style="width:100%" onclick="avancarEtapaDireto('${proc.id}')"><i class="ti ti-check"></i> Concluir Etapa e Avançar</button>`;
+  } else if (e.num < proc.etapaAtual || proc.etapaAtual === 14) {
+    actEl.innerHTML = `<div style="font-size:13px;color:var(--green-600);display:flex;align-items:center;gap:6px"><i class="ti ti-circle-check"></i> Etapa finalizada com sucesso</div>`;
+  } else {
+    actEl.innerHTML = `<div style="font-size:13px;color:var(--text-hint)">Aguardando conclusão das etapas anteriores.</div>`;
+  }
+}
+
+// 6. ABA DE DOCUMENTOS (TABELA REAL)
+function renderDocumentTable() {
+  const tbody = document.getElementById('tb-docs');
+  if(!tbody) return;
+
+  tbody.innerHTML = DOCUMENTOS.map(d => `<tr>
+    <td><strong>${d.nome}</strong></td>
+    <td><span class="badge badge-blue">${d.tipo}</span></td>
+    <td>${d.data}</td>
+    <td><span class="badge badge-green">${d.status}</span></td>
+    <td>${d.resp}</td>
+    <td><span class="badge badge-purple">${d.proc}</span></td>
+  </tr>`).join('');
+}
+
+// 7. ABA DE MONITORAMENTO DINÂMICO
+function renderMonitoramento() {
+  const proc = PROCESSOS.find(p => p.id === activeProcessId);
+  if(!proc) return;
+
+  document.getElementById('monit-subtitle').textContent = `Rastreamento em tempo real do processo ativo: ${proc.id} (${proc.produto})`;
+  document.getElementById('mon-navio').textContent = proc.navio;
+  document.getElementById('mon-bl').textContent = proc.bl;
+  document.getElementById('mon-origem').textContent = proc.origem;
+  document.getElementById('mon-eta').textContent = proc.eta;
+  
+  const statusEl = document.getElementById('mon-status');
+  statusEl.textContent = proc.etapaAtual >= 14 ? 'Entregue' : proc.etapaAtual >= 10 ? 'Em Alto Mar' : 'Aguardando Embarque';
+  statusEl.className = `badge ${proc.etapaAtual >= 14 ? 'badge-green' : proc.etapaAtual >= 10 ? 'badge-amber' : 'badge-gray'}`;
+
+  // Montagem da timeline dinâmica baseado no progresso
+  const tl = document.getElementById('mon-timeline');
+  tl.innerHTML = `
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot done"></div><div class="tl-line"></div></div>
+      <div class="tl-body"><div class="tl-title">Saída da Origem</div><div class="tl-date">${proc.origem}</div></div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot ${proc.etapaAtual >= 10 ? 'done' : 'pending'}"></div><div class="tl-line"></div></div>
+      <div class="tl-body"><div class="tl-title">Em Trânsito Internacional</div><div class="tl-date">Navio: ${proc.navio}</div></div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot ${proc.etapaAtual >= 13 ? 'done' : 'pending'}"></div><div class="tl-line"></div></div>
+      <div class="tl-body"><div class="tl-title">Chegada e Despacho no Porto de Santos</div><div class="tl-date">Previsão ETA: ${proc.eta}</div></div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-left"><div class="tl-dot ${proc.etapaAtual == 14 ? 'done' : 'pending'}"></div></div>
+      <div class="tl-body"><div class="tl-title">Entrega do Material & Câmbio Final</div><div class="tl-date">Fim do Processo</div></div>
+    </div>
+  `;
+}
+
+// 8. LOGICA DE NEGÓCIO: CRIAR NOVO PROCESSO
+function criarProcesso(e) {
+  e.preventDefault();
+  
+  const idNum = PROCESSOS.length + 2; 
+  const nextId = `IMP-2025-0${idNum}`;
+
+  const novo = {
+    id: nextId,
+    fornecedor: document.getElementById('f-fornecedor').value,
+    produto: document.getElementById('f-produto').value,
+    ncm: document.getElementById('f-ncm').value,
+    incoterm: document.getElementById('f-pais').value,
+    valor: parseFloat(document.getElementById('f-fob').value) || 0,
+    etapaAtual: 1,
+    status: 'Em andamento',
+    navio: 'Logística padrão global',
+    bl: 'BL-' + Math.floor(Math.random()*900000),
+    origem: document.getElementById('f-pais').value,
+    eta: 'A combinar'
+  };
+
+  PROCESSOS.unshift(novo); // Coloca no topo
+  activeProcessId = nextId; // Foca nele
+  
+  document.getElementById('form-novo-processo').reset();
+  closeModal('modalNovo');
+  updateAllViews();
+  
+  // Muda para a página de processos para ver o resultado
+  goPage('processos');
+}
+
+// 9. LOGICA DE NEGÓCIO: ADICIONAR DOCUMENTO
+function enviarDoc(e) {
+  e.preventDefault();
+  
+  const novoDoc = {
+    nome: document.getElementById('doc-tipo').value,
+    tipo: document.getElementById('doc-tipo').value.split(' ')[0],
+    data: new Date().toLocaleDateString('pt-BR'),
+    status: 'Enviado',
+    resp: document.getElementById('doc-resp').value,
+    proc: document.getElementById('doc-processo-rel').value
+  };
+
+  DOCUMENTOS.unshift(novoDoc);
+  document.getElementById('form-novo-doc').reset();
+  closeModal('modalDoc');
+  updateAllViews();
+  goPage('docs');
+}
+
+// 10. LÓGICA DE AVANÇO DE ETAPA
+function avancarEtapaDireto(id) {
+  const proc = PROCESSOS.find(p => p.id === id);
+  if (proc && proc.etapaAtual < 14) {
+    proc.etapaAtual++;
+    if(proc.etapaAtual === 14) proc.status = 'Finalizado';
+    updateAllViews();
+    showStepDetail(proc.etapaAtual - 1);
+  }
+}
+
+function abrirProcessoModal(id) {
+  modalTargetProcessId = id;
+  const proc = PROCESSOS.find(p => p.id === id);
+  if(!proc) return;
+
+  document.getElementById('mp-title').textContent = `Detalhes do Processo ${proc.id}`;
+  
+  const pct = Math.round((proc.etapaAtual / 14) * 100);
+  const currentStepData = BASE_ETAPAS[proc.etapaAtual-1];
+
+  document.getElementById('mp-body').innerHTML = `
+    <div class="progress-bar" style="margin-bottom:8px"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div style="font-size:12px;color:var(--text-hint);margin-bottom:1rem">Fase ${proc.etapaAtual} de 14 (${pct}% executado)</div>
+    <div class="form-grid" style="font-size:14px;gap:8px; background:#fcfbf9; padding:10px; border-radius:8px">
+      <div><span style="color:var(--text-muted)">Fornecedor:</span> <br><strong>${proc.fornecedor}</strong></div>
+      <div><span style="color:var(--text-muted)">Mercadoria:</span> <br><strong>${proc.produto}</strong></div>
+      <div><span style="color:var(--text-muted)">Valor FOB:</span> <br><strong>US$ ${proc.valor.toLocaleString('pt-BR')}</strong></div>
+      <div><span style="color:var(--text-muted)">Status Operacional:</span> <br><span class="badge badge-amber">${proc.status}</span></div>
+    </div>
+    <div style="margin-top:1rem;padding:1rem;background:var(--surface2);border-radius:var(--radius);font-size:13px;">
+       <h4 style="margin-bottom:4px; color:var(--blue-800)">Etapa Atual: ${currentStepData.label}</h4>
+       <p style="color:var(--text-muted)">${currentStepData.desc}</p>
+    </div>
+  `;
+
+  const btn = document.getElementById('mp-btn-avancar');
+  if(proc.etapaAtual >= 14) {
+    btn.style.display = 'none';
+  } else {
+    btn.style.display = 'inline-flex';
+  }
+
+  openModal('modalProcesso');
+}
+
+function avancarEtapaModal() {
+  if(modalTargetProcessId) {
+    avancarEtapaDireto(modalTargetProcessId);
+    abrirProcessoModal(modalTargetProcessId); // Recarrega view do modal
+  }
+}
+
+// 11. CONSULTA DE NCM REAL
+function consultarNCM() {
+  const q = document.getElementById('ncm-query').value.toLowerCase();
+  const c = document.getElementById('ncm-code').value;
+  let found = null;
+
+  if (c) {
+    found = ncmDB.find(n => n.code.replace('.','').startsWith(c.replace('.','').substring(0,4)));
+  } else if (q) {
+    found = ncmDB.find(n => n.name.toLowerCase().includes(q) || n.desc.toLowerCase().includes(q));
+  }
+
+  if(!found) found = ncmDB[0]; // Fallback pedagógico se não encontrar nada
+
+  document.getElementById('ncm-result-code').textContent = found.code;
+  document.getElementById('ncm-result-name').textContent = found.name;
+  document.getElementById('ncm-result-desc').textContent = found.desc;
+  document.getElementById('ncm-ii').textContent = found.ii + '%';
+  document.getElementById('ncm-ipi').textContent = found.ipi + '%';
+  document.getElementById('ncm-li').textContent = found.li ? 'Exige LI Antecipada' : 'Dispensado de LI';
+  document.getElementById('ncm-li').className = found.li ? 'badge badge-amber' : 'badge badge-green';
+  document.getElementById('ncm-result').style.display = 'block';
+}
+
+// 12. CALCULADORA DINÂMICA DE ESTIMATIVAS
+function calcCustos() {
+  const fob = parseFloat(document.getElementById('c-fob').value) || 0;
+  const frete = parseFloat(document.getElementById('c-frete').value) || 0;
+  const segPct = parseFloat(document.getElementById('c-seguro').value) || 0;
+  const ii = parseFloat(document.getElementById('c-ii').value) || 0;
+  const ipi = parseFloat(document.getElementById('c-ipi').value) || 0;
+  const cambio = parseFloat(document.getElementById('c-cambio').value) || 5.1;
+  
+  const seguro = fob * segPct / 100;
+  const cif = fob + frete + seguro;
+  const iiVal = cif * ii / 100;
+  const ipiVal = (cif + iiVal) * ipi / 100;
+  const pis = cif * 0.0965; // Alíquota fixa simulada de PIS/COFINS Importação
+  const desp = 2500; // Taxa aduaneira fixa representativa
+  
+  const total = cif + iiVal + ipiVal + pis + desp;
+  const totalBrl = total * cambio;
+  const markup = fob > 0 ? ((total / fob) - 1) * 100 : 0;
+  
+  const fmt = (v) => 'US$ ' + Math.round(v).toLocaleString('pt-BR');
+  
+  document.getElementById('cr-fob').textContent = fmt(fob);
+  document.getElementById('cr-frete').textContent = fmt(frete);
+  document.getElementById('cr-seguro').textContent = fmt(seguro);
+  document.getElementById('cr-cif').textContent = fmt(cif);
+  document.getElementById('cr-ii').textContent = fmt(iiVal);
+  document.getElementById('cr-ipi').textContent = fmt(ipiVal);
+  document.getElementById('cr-pis').textContent = fmt(pis);
+  document.getElementById('cr-total').textContent = fmt(total);
+  document.getElementById('cr-total-brl').textContent = 'R$ ' + Math.round(totalBrl).toLocaleString('pt-BR');
+  document.getElementById('cr-markup').textContent = markup.toFixed(1) + '%';
+}
+
+// 13. NAVEGAÇÃO DE PÁGINAS
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  
+  const map = {dashboard:0,processos:1,fluxo:2,ncm:3,custos:4,docs:5,monitoramento:6};
+  document.querySelectorAll('.nav-btn')[map[id]]?.classList.add('active');
+}
+
+// 14. CONTROLE DE MODAIS
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Fechar modais clicando fora
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+</script>
+</body>
+</html>
